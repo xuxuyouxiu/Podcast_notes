@@ -20,7 +20,7 @@ import {
 import { isSubPathOf } from './security'
 import {
   platformRegistry,
-  fetchOgTitle, // eslint-disable-line @typescript-eslint/no-unused-vars
+  fetchOgTitle,
   extractAudioWithYtDlp,
   extractSubtitles,
   parseSubtitleToText,

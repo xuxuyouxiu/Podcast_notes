@@ -46,6 +46,13 @@ def main() -> None:
         bucket.put_object_from_file(key, local, headers={"CacheControl": cache})
         print(f"[sync-oss] OK {key}")
 
+    # 固定路径副本（不带版本号）：供官网/外部探测「最新版本号」，
+    # 否则探测方必须先知道版本号才能拼出带版本的路径（鸡生蛋）
+    bucket.put_object_from_file(
+        "download/latest.yml", os.path.join(dist, "latest.yml"), headers={"CacheControl": "no-cache"}
+    )
+    print("[sync-oss] OK download/latest.yml")
+
     # 校验 latest.yml 可读且含版本号（防传错文件）
     obj = bucket.get_object(f"download/v{version}/latest.yml")
     head = obj.read(256).decode("utf-8", errors="replace")

@@ -5,6 +5,14 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，\
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.52.7] - 2026-08-24
+
+### 改进
+- **发布产物同步 OSS 时额外上传固定路径 `download/latest.yml`**（不带版本号、禁缓存）：官网/外部探测最新版本号不再需要先知道版本号才能拼出带版本的路径（鸡生蛋问题），为官网下载区自动展示最新版本铺路。
+
+### 清理
+- 删除分享卡遗留的 `extractChips` 函数（v1.46.0 知识卡片重做后模板已不使用），lint 警告清零。
+- 移除 `podcast.ts` 中失效的 eslint-disable 注释（fetchOgTitle 实际有使用）。
 ## [1.52.6] - 2026-08-22
 
 ### 修复

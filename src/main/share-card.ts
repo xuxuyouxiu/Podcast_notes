@@ -107,50 +107,6 @@ function extractPoints(md: string): string[] {
   return out
 }
 
-/** 从 markdown 提取实体 chips（[名称](../目录/名称.md) 链接，按出现频次排序，最多 4 个） */
-function extractChips(md: string): { name: string; type: string }[] {
-  const typeOf = (dir: string): string => {
-    if (dir.includes('人物')) return 'person'
-    if (dir.includes('项目')) return 'project'
-    if (dir.includes('概念')) return 'concept'
-    return 'term'
-  }
-  const counts = new Map<string, { name: string; type: string; count: number }>()
-  // 标准 markdown 链接：[名称](../目录/名称.md)
-  const re = /\[([^\]]+)\]\(\.?\.?[\\/]([^)]*[\\/])?([^)]+\.md)\)/g
-  let m: RegExpExecArray | null
-  while ((m = re.exec(md)) !== null) {
-    const name = m[1].trim()
-    const dir = (m[2] || '').replace(/[\\/]/g, '')
-    if (!name || name.length > 20) continue
-    const cur = counts.get(name)
-    if (cur) {
-      cur.count += 1
-    } else {
-      counts.set(name, { name, type: typeOf(dir), count: 1 })
-    }
-  }
-  // 兜底：wiki 链接 [[名称]]
-  if (counts.size === 0) {
-    const re2 = /\[\[([^\]|]+)\]\]/g
-    while ((m = re2.exec(md)) !== null) {
-      const raw = m[1].split(/[\\/]/).pop() || m[1]
-      if (raw.length > 20) continue
-      const cur = counts.get(raw)
-      if (cur) cur.count += 1
-      else counts.set(raw, { name: raw, type: 'term', count: 1 })
-    }
-  }
-  return Array.from(counts.values())
-    .sort((a, b) => {
-      // 类型加权：项目/人物（公司、品牌、人）优先于概念/术语，同类型按频次
-      const w = (t: string) => (t === 'project' ? 0 : t === 'person' ? 1 : t === 'concept' ? 2 : 3)
-      return w(a.type) - w(b.type) || b.count - a.count
-    })
-    .slice(0, 4)
-    .map(({ name, type }) => ({ name, type }))
-}
-
 /** 从 frontmatter 提取日期（优先），无则当天 */
 function extractDate(md: string): string {
   const fm = md.match(/^---\r?\n([\s\S]*?)\r?\n---/)
