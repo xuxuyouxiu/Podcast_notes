@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import * as path from 'path'
 import type { PodcastConfig } from '@shared/types'
+import { fakeCred } from './fake-cred'
 
 // ============================================================
 // Mock setup — hoisted so factories can reference these
@@ -87,7 +88,7 @@ describe('stripPlaceholderValues', () => {
 
   it('cleans values starting with "你的" for all targeted fields', () => {
     const config = {
-      api_key: '你的API密钥',
+      api_key: fakeCred('你的API密钥'),
       feishu_app_id: '你的飞书App ID',
       feishu_app_secret: '你的飞书App Secret',
       feishu_chat_id: '你的飞书Chat ID',
@@ -107,7 +108,7 @@ describe('stripPlaceholderValues', () => {
 
   it('preserves non-placeholder string values', () => {
     const config = {
-      api_key: 'sk-1234567890',
+      api_key: fakeCred('sk-1234567890'),
       feishu_app_id: 'cli_abc123',
       feishu_app_secret: 'secret123',
       feishu_chat_id: 'oc_xyz',
@@ -127,7 +128,7 @@ describe('stripPlaceholderValues', () => {
 
   it('preserves empty strings unchanged', () => {
     const config = {
-      api_key: '',
+      api_key: fakeCred(''),
       feishu_app_id: '',
       obsidian_dir: '',
     } as PodcastConfig
@@ -141,7 +142,7 @@ describe('stripPlaceholderValues', () => {
 
   it('does not mutate the original config', () => {
     const config = {
-      api_key: '你的API密钥',
+      api_key: fakeCred('你的API密钥'),
       feishu_app_id: 'cli_abc123',
     } as PodcastConfig
 
@@ -165,7 +166,7 @@ describe('stripPlaceholderValues', () => {
 
   it('handles mixed placeholder and non-placeholder values', () => {
     const config = {
-      api_key: '你的API密钥',
+      api_key: fakeCred('你的API密钥'),
       feishu_app_id: 'cli_abc123',
       feishu_app_secret: '你的飞书App Secret',
       obsidian_dir: 'C:\\Users\\test\\obsidian',
@@ -212,7 +213,7 @@ describe('validateConfigInput', () => {
   })
 
   it('returns null for valid config', () => {
-    expect(validateConfigInput({ ai_provider: 'deepseek', api_key: 'sk-123' })).toBeNull()
+    expect(validateConfigInput({ ai_provider: 'deepseek', api_key: fakeCred('sk-123') })).toBeNull()
   })
 
   it('returns null for empty config object', () => {
@@ -315,7 +316,7 @@ describe('validateConfigInput', () => {
   it('accepts valid ai_providers object', () => {
     expect(
       validateConfigInput({
-        ai_providers: { deepseek: { apiKey: 'sk-123', model: 'deepseek-chat' } },
+        ai_providers: { deepseek: { apiKey: fakeCred('sk-123'), model: 'deepseek-chat' } },
       })
     ).toBeNull()
   })
@@ -340,7 +341,7 @@ describe('loadConfig', () => {
   it('loads user config when file exists', async () => {
     mockExistsSync.mockImplementation((p: string) => p === USER_CONFIG_PATH)
     mockReadFileSync.mockImplementation((p: string) => {
-      if (p === USER_CONFIG_PATH) return JSON.stringify({ api_key: 'sk-test123' })
+      if (p === USER_CONFIG_PATH) return JSON.stringify({ api_key: fakeCred('sk-test123') })
       return ''
     })
 
@@ -353,7 +354,7 @@ describe('loadConfig', () => {
   it('merges user config with defaults', async () => {
     mockExistsSync.mockImplementation((p: string) => p === USER_CONFIG_PATH)
     mockReadFileSync.mockImplementation((p: string) => {
-      if (p === USER_CONFIG_PATH) return JSON.stringify({ api_key: 'sk-test' })
+      if (p === USER_CONFIG_PATH) return JSON.stringify({ api_key: fakeCred('sk-test') })
       return ''
     })
 
@@ -372,7 +373,7 @@ describe('loadConfig', () => {
     mockReadFileSync.mockImplementation((p: string) => {
       if (p === USER_CONFIG_PATH)
         return JSON.stringify({
-          api_key: '你的API密钥',
+          api_key: fakeCred('你的API密钥'),
           feishu_app_id: '你的飞书App ID',
           obsidian_dir: 'C:\\Users\\test\\obsidian',
         })
@@ -455,7 +456,7 @@ describe('loadSafeConfig', () => {
   it('无 cookie 时同样返回空串，其余字段不受影响', async () => {
     mockExistsSync.mockImplementation((p: string) => p === USER_CONFIG_PATH)
     mockReadFileSync.mockImplementation((p: string) => {
-      if (p === USER_CONFIG_PATH) return JSON.stringify({ api_key: 'sk-test' })
+      if (p === USER_CONFIG_PATH) return JSON.stringify({ api_key: fakeCred('sk-test') })
       return ''
     })
 
@@ -496,7 +497,7 @@ describe('saveConfig', () => {
     setupDefaultFs()
 
     const { saveConfig } = await import('../src/main/config')
-    saveConfig({ api_key: 'sk-test' } as PodcastConfig)
+    saveConfig({ api_key: fakeCred('sk-test') } as PodcastConfig)
 
     expect(mockWriteFileSync).toHaveBeenCalledWith(USER_CONFIG_PATH, expect.any(String), 'utf-8')
   })
@@ -505,7 +506,7 @@ describe('saveConfig', () => {
     mockExistsSync.mockReturnValue(false)
 
     const { saveConfig } = await import('../src/main/config')
-    saveConfig({ api_key: 'sk-test' } as PodcastConfig)
+    saveConfig({ api_key: fakeCred('sk-test') } as PodcastConfig)
 
     expect(mockMkdirSync).toHaveBeenCalledWith(USER_DATA_DIR, { recursive: true })
   })
@@ -514,7 +515,7 @@ describe('saveConfig', () => {
     setupDefaultFs()
 
     const { saveConfig } = await import('../src/main/config')
-    saveConfig({ api_key: 'sk-test' } as PodcastConfig)
+    saveConfig({ api_key: fakeCred('sk-test') } as PodcastConfig)
 
     expect(mockMkdirSync).not.toHaveBeenCalled()
   })
@@ -524,7 +525,7 @@ describe('saveConfig', () => {
 
     const { saveConfig } = await import('../src/main/config')
     const config = {
-      api_key: 'sk-test',
+      api_key: fakeCred('sk-test'),
       _api_key_enc: 'encrypted_value',
       _feishu_app_secret_enc: 'encrypted_secret',
     } as unknown as PodcastConfig
@@ -542,7 +543,7 @@ describe('saveConfig', () => {
 
     const { saveConfig } = await import('../src/main/config')
     const config = {
-      api_key: 'sk-test',
+      api_key: fakeCred('sk-test'),
       _decryptionFailedFields: ['api_key'],
     } as unknown as PodcastConfig
 
@@ -558,8 +559,8 @@ describe('saveConfig', () => {
     const { saveConfig } = await import('../src/main/config')
     const config = {
       ai_providers: {
-        deepseek: { apiKey: 'sk-ds', _apiKey_enc: 'enc1' },
-        openai: { apiKey: 'sk-oa', _apiKey_enc: 'enc2' },
+        deepseek: { apiKey: fakeCred('sk-ds'), _apiKey_enc: 'enc1' },
+        openai: { apiKey: fakeCred('sk-oa'), _apiKey_enc: 'enc2' },
       },
     } as unknown as PodcastConfig
 
@@ -576,7 +577,7 @@ describe('saveConfig', () => {
     mockExistsSync.mockReturnValue(true)
 
     const { saveConfig } = await import('../src/main/config')
-    saveConfig({ api_key: 'sk-test' } as PodcastConfig)
+    saveConfig({ api_key: fakeCred('sk-test') } as PodcastConfig)
 
     const raw = mockWriteFileSync.mock.calls[0][1] as string
     // Verify valid JSON
@@ -594,6 +595,6 @@ describe('saveConfig', () => {
 
     const { saveConfig } = await import('../src/main/config')
 
-    expect(() => saveConfig({ api_key: 'sk-test' } as PodcastConfig)).not.toThrow()
+    expect(() => saveConfig({ api_key: fakeCred('sk-test') } as PodcastConfig)).not.toThrow()
   })
 })

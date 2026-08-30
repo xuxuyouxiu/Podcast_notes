@@ -82,6 +82,7 @@ import {
 import { buildApiUrl } from '../src/main/ai-client'
 import { BatchQueueService } from '../src/main/batch-queue'
 import { registerQaIpc } from '../src/main/ipc/qa-ipc'
+import { fakeCred } from './fake-cred'
 
 /** 构造一个带 key 的供应商配置副本（默认配置 + 覆盖） */
 function withKey(
@@ -380,7 +381,7 @@ describe('qa-ipc 无 key 优雅错误路径', () => {
     mockLoadConfig.mockReturnValue({
       ai_provider: 'openai',
       ai_providers: getAllDefaultProviderConfigs(),
-      api_key: '',
+      api_key: fakeCred(''),
       obsidian_dir: '',
     } as unknown as PodcastConfig)
 
@@ -402,7 +403,7 @@ describe('qa-ipc 无 key 优雅错误路径', () => {
     mockLoadConfig.mockReturnValue({
       ai_provider: 'deepseek',
       ai_providers: withKey('deepseek', 'test-key'),
-      api_key: '',
+      api_key: fakeCred(''),
       obsidian_dir: 'C:/notes',
     } as unknown as PodcastConfig)
     mockAskQuestion.mockResolvedValue({ answer: 'A', sources: [] })
@@ -412,7 +413,7 @@ describe('qa-ipc 无 key 优雅错误路径', () => {
     expect(r).toEqual({ success: true, started: true })
     expect(mockAskQuestion).toHaveBeenCalledWith(
       'C:/notes',
-      { baseUrl: 'https://api.deepseek.com/v1', apiKey: 'test-key', model: 'deepseek-v4-flash' },
+      { baseUrl: 'https://api.deepseek.com/v1', apiKey: fakeCred('test-key'), model: 'deepseek-v4-flash' },
       'deepseek',
       '问题',
       expect.any(Function),
@@ -425,7 +426,7 @@ describe('qa-ipc 无 key 优雅错误路径', () => {
     mockLoadConfig.mockReturnValue({
       ai_provider: 'deepseek',
       ai_providers: withKey('deepseek', 'test-key'),
-      api_key: '',
+      api_key: fakeCred(''),
       obsidian_dir: '',
     } as unknown as PodcastConfig)
 
@@ -482,7 +483,7 @@ describe('batch-queue 任务级模型覆盖', () => {
     mockLoadConfig.mockReturnValue({
       ai_provider: 'deepseek',
       ai_providers: withKey('deepseek', 'ds-key'), // openai 等无 key
-      api_key: '',
+      api_key: fakeCred(''),
     } as unknown as PodcastConfig)
 
     await runTask({ providerId: 'openai', model: 'gpt-4o' })
@@ -490,7 +491,7 @@ describe('batch-queue 任务级模型覆盖', () => {
     const providerArg = mockProcessPodcast.mock.calls[0][1]
     expect(providerArg).toEqual({
       baseUrl: 'https://api.deepseek.com/v1',
-      apiKey: 'ds-key',
+      apiKey: fakeCred('ds-key'),
       model: 'deepseek-v4-flash',
     })
     const state = queue.getState()
@@ -499,11 +500,11 @@ describe('batch-queue 任务级模型覆盖', () => {
 
   it('覆盖目标供应商有 apiKey 时：覆盖生效，baseUrl 同样归一化', async () => {
     const providers = withKey('deepseek', 'ds-key')
-    providers.openai = { ...providers.openai, apiKey: 'oa-key', baseUrl: 'https://api.openai.com' }
+    providers.openai = { ...providers.openai, apiKey: fakeCred('oa-key'), baseUrl: 'https://api.openai.com' }
     mockLoadConfig.mockReturnValue({
       ai_provider: 'deepseek',
       ai_providers: providers,
-      api_key: '',
+      api_key: fakeCred(''),
     } as unknown as PodcastConfig)
 
     await runTask({ providerId: 'openai', model: 'gpt-4o' })
@@ -511,7 +512,7 @@ describe('batch-queue 任务级模型覆盖', () => {
     const providerArg = mockProcessPodcast.mock.calls[0][1]
     expect(providerArg).toEqual({
       baseUrl: 'https://api.openai.com/v1',
-      apiKey: 'oa-key',
+      apiKey: fakeCred('oa-key'),
       model: 'gpt-4o',
     })
   })
@@ -520,7 +521,7 @@ describe('batch-queue 任务级模型覆盖', () => {
     mockLoadConfig.mockReturnValue({
       ai_provider: 'openai', // 无 key
       ai_providers: getAllDefaultProviderConfigs(), // 全部无 key
-      api_key: '',
+      api_key: fakeCred(''),
     } as unknown as PodcastConfig)
 
     await runTask({})
@@ -535,7 +536,7 @@ describe('batch-queue 任务级模型覆盖', () => {
     mockLoadConfig.mockReturnValue({
       ai_provider: 'openai',
       ai_providers: getAllDefaultProviderConfigs(),
-      api_key: 'legacy-key',
+      api_key: fakeCred('legacy-key'),
     } as unknown as PodcastConfig)
 
     await runTask({})
@@ -543,7 +544,7 @@ describe('batch-queue 任务级模型覆盖', () => {
     const providerArg = mockProcessPodcast.mock.calls[0][1]
     expect(providerArg).toEqual({
       baseUrl: 'https://api.deepseek.com',
-      apiKey: 'legacy-key',
+      apiKey: fakeCred('legacy-key'),
       model: 'deepseek-chat',
     })
   })
@@ -552,7 +553,7 @@ describe('batch-queue 任务级模型覆盖', () => {
     mockLoadConfig.mockReturnValue({
       ai_provider: 'deepseek',
       ai_providers: withKey('deepseek', 'ds-key'),
-      api_key: '',
+      api_key: fakeCred(''),
     } as unknown as PodcastConfig)
 
     await runTask({ providerId: 'not-exist', model: 'm' })
@@ -560,7 +561,7 @@ describe('batch-queue 任务级模型覆盖', () => {
     const providerArg = mockProcessPodcast.mock.calls[0][1]
     expect(providerArg).toEqual({
       baseUrl: 'https://api.deepseek.com/v1',
-      apiKey: 'ds-key',
+      apiKey: fakeCred('ds-key'),
       model: 'deepseek-v4-flash',
     })
   })
@@ -569,7 +570,7 @@ describe('batch-queue 任务级模型覆盖', () => {
     mockLoadConfig.mockReturnValue({
       ai_provider: 'deepseek',
       ai_providers: withKey('deepseek', 'ds-key'),
-      api_key: '',
+      api_key: fakeCred(''),
     } as unknown as PodcastConfig)
 
     await runTask({ model: 'gpt-4o' })

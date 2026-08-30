@@ -16,6 +16,7 @@ vi.mock('electron', () => ({
   shell: { openPath: vi.fn(), openExternal: vi.fn(), showItemInFolder: vi.fn() },
 }))
 
+import { fakeCred } from './fake-cred'
 import {
   testNotionConnection,
   exportToNotion,
@@ -49,19 +50,19 @@ afterEach(() => {
 
 describe('testNotionConnection 参数校验', () => {
   it('token 为空时返回可读错误且不发请求', async () => {
-    const result = await testNotionConnection({ token: '', databaseId: 'db-1' })
+    const result = await testNotionConnection({ token: fakeCred(''), databaseId: 'db-1' })
     expect(result).toEqual({ success: false, error: 'Token 和 Database ID 不能为空' })
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('databaseId 为空时返回可读错误且不发请求', async () => {
-    const result = await testNotionConnection({ token: 'secret_xxx', databaseId: '' })
+    const result = await testNotionConnection({ token: fakeCred('secret_xxx'), databaseId: '' })
     expect(result).toEqual({ success: false, error: 'Token 和 Database ID 不能为空' })
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('token 为纯空白时同样拒绝', async () => {
-    const result = await testNotionConnection({ token: '   ', databaseId: 'db-1' })
+    const result = await testNotionConnection({ token: fakeCred('   '), databaseId: 'db-1' })
     expect(result).toEqual({ success: false, error: 'Token 和 Database ID 不能为空' })
     expect(fetchMock).not.toHaveBeenCalled()
   })
@@ -74,7 +75,7 @@ describe('testNotionConnection 请求构造', () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse(200, { title: [{ plain_text: '播客笔记库' }] }),
     )
-    const result = await testNotionConnection({ token: '  secret_xxx  ', databaseId: '  db-123  ' })
+    const result = await testNotionConnection({ token: fakeCred('  secret_xxx  '), databaseId: '  db-123  ' })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url, init] = fetchMock.mock.calls[0]
@@ -90,31 +91,31 @@ describe('testNotionConnection 请求构造', () => {
 
   it('200 但无 title 时 databaseTitle 回退为「未命名」', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(200, { title: [] }))
-    const result = await testNotionConnection({ token: 't', databaseId: 'd' })
+    const result = await testNotionConnection({ token: fakeCred('t'), databaseId: 'd' })
     expect(result).toEqual({ success: true, databaseTitle: '未命名' })
   })
 
   it('401 时返回 Integration Token 无效或已过期', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(401, { message: 'unauthorized' }))
-    const result = await testNotionConnection({ token: 't', databaseId: 'd' })
+    const result = await testNotionConnection({ token: fakeCred('t'), databaseId: 'd' })
     expect(result).toEqual({ success: false, error: 'Integration Token 无效或已过期' })
   })
 
   it('404 时返回 Database 不存在或集成未共享该 database', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(404, { message: 'not found' }))
-    const result = await testNotionConnection({ token: 't', databaseId: 'd' })
+    const result = await testNotionConnection({ token: fakeCred('t'), databaseId: 'd' })
     expect(result).toEqual({ success: false, error: 'Database 不存在或集成未共享该 database' })
   })
 
   it('其它非 2xx 时透传 API 错误信息', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(500, { message: 'Internal server error' }))
-    const result = await testNotionConnection({ token: 't', databaseId: 'd' })
+    const result = await testNotionConnection({ token: fakeCred('t'), databaseId: 'd' })
     expect(result).toEqual({ success: false, error: 'Notion API 错误: Internal server error' })
   })
 
   it('网络异常时返回网络错误而非抛异常', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('fetch failed'))
-    const result = await testNotionConnection({ token: 't', databaseId: 'd' })
+    const result = await testNotionConnection({ token: fakeCred('t'), databaseId: 'd' })
     expect(result.success).toBe(false)
     expect(result.error).toMatch(/^网络错误: fetch failed/)
   })
@@ -122,7 +123,7 @@ describe('testNotionConnection 请求构造', () => {
   it('请求中止（超时）时返回请求超时提示', async () => {
     const abortErr = new DOMException('The operation was aborted.', 'AbortError')
     fetchMock.mockRejectedValueOnce(abortErr)
-    const result = await testNotionConnection({ token: 't', databaseId: 'd' })
+    const result = await testNotionConnection({ token: fakeCred('t'), databaseId: 'd' })
     expect(result).toEqual({ success: false, error: '网络错误: 请求超时（30s）' })
   })
 })
@@ -132,7 +133,7 @@ describe('testNotionConnection 请求构造', () => {
 describe('exportToNotion 参数校验', () => {
   it('token 缺失时返回可读错误且不发请求', async () => {
     const result = await exportToNotion({
-      token: '',
+      token: fakeCred(''),
       databaseId: 'db-1',
       markdown: '# 笔记',
       relativePath: 'note.md',
@@ -143,7 +144,7 @@ describe('exportToNotion 参数校验', () => {
 
   it('databaseId 缺失时返回可读错误且不发请求', async () => {
     const result = await exportToNotion({
-      token: 'secret_xxx',
+      token: fakeCred('secret_xxx'),
       databaseId: '   ',
       markdown: '# 笔记',
       relativePath: 'note.md',
@@ -185,7 +186,7 @@ describe('exportToNotion 成功链路', () => {
     ].join('\n')
 
     const result = await exportToNotion({
-      token: 'ntn_test',
+      token: fakeCred('ntn_test'),
       databaseId: 'db-1',
       markdown,
       relativePath: 'notes/测试集.md',
@@ -245,7 +246,7 @@ describe('exportToNotion 成功链路', () => {
 
     const body = Array.from({ length: 120 }, (_, i) => `- item ${i + 1}`).join('\n')
     const result = await exportToNotion({
-      token: 't',
+      token: fakeCred('t'),
       databaseId: 'db-1',
       markdown: '---\ntitle: 大笔记\n---\n' + body,
       relativePath: 'big.md',
@@ -269,7 +270,7 @@ describe('exportToNotion 重复检测', () => {
       )
 
     const result = await exportToNotion({
-      token: 't',
+      token: fakeCred('t'),
       databaseId: 'db-1',
       markdown: '---\ntitle: 测试集\n---\n正文',
       relativePath: 'note.md',
@@ -292,7 +293,7 @@ describe('exportToNotion 重复检测', () => {
       .mockResolvedValueOnce(jsonResponse(200, { id: 'p', url: 'u', object: 'page' }))
 
     const result = await exportToNotion({
-      token: 't',
+      token: fakeCred('t'),
       databaseId: 'db-1',
       markdown: '---\ntitle: 新笔记\n---\n正文',
       relativePath: 'note.md',
@@ -312,7 +313,7 @@ describe('exportToNotion 标题 fallback', () => {
       .mockResolvedValueOnce(jsonResponse(200, { id: 'p', url: 'u', object: 'page' }))
 
     await exportToNotion({
-      token: 't',
+      token: fakeCred('t'),
       databaseId: 'db-1',
       markdown: '# 只有正文没有 frontmatter',
       relativePath: 'notes/vol42-科技早知道.md',
@@ -334,7 +335,7 @@ describe('exportToNotion API 错误传播', () => {
   it('schema 401 → 抛出「Notion Integration Token 无效或已过期」并带 status', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(401, { message: 'unauthorized' }))
     try {
-      await exportToNotion({ token: 'bad', databaseId: 'db-1', markdown: 'x', relativePath: 'a.md' })
+      await exportToNotion({ token: fakeCred('bad'), databaseId: 'db-1', markdown: 'x', relativePath: 'a.md' })
       expect.unreachable('应当抛出 401 错误')
     } catch (e) {
       expect(e).toMatchObject({ status: 401 })
@@ -345,7 +346,7 @@ describe('exportToNotion API 错误传播', () => {
   it('schema 404 → 抛出「Notion Database 不存在或集成未共享该 database」', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(404, { message: 'not found' }))
     await expect(
-      exportToNotion({ token: 't', databaseId: 'db-x', markdown: 'x', relativePath: 'a.md' }),
+      exportToNotion({ token: fakeCred('t'), databaseId: 'db-x', markdown: 'x', relativePath: 'a.md' }),
     ).rejects.toThrow('Notion Database 不存在或集成未共享该 database')
   })
 
@@ -354,7 +355,7 @@ describe('exportToNotion API 错误传播', () => {
       .mockResolvedValueOnce(jsonResponse(200, SCHEMA_200))
       .mockResolvedValueOnce(jsonResponse(400, { message: 'body failed validation' }))
     await expect(
-      exportToNotion({ token: 't', databaseId: 'db-1', markdown: '# x', relativePath: 'a.md' }),
+      exportToNotion({ token: fakeCred('t'), databaseId: 'db-1', markdown: '# x', relativePath: 'a.md' }),
     ).rejects.toThrow('参数错误: body failed validation')
   })
 
@@ -363,7 +364,7 @@ describe('exportToNotion API 错误传播', () => {
       .mockResolvedValueOnce(jsonResponse(200, SCHEMA_200))
       .mockResolvedValueOnce(jsonResponse(429, { message: 'rate limited' }))
     await expect(
-      exportToNotion({ token: 't', databaseId: 'db-1', markdown: '# x', relativePath: 'a.md' }),
+      exportToNotion({ token: fakeCred('t'), databaseId: 'db-1', markdown: '# x', relativePath: 'a.md' }),
     ).rejects.toThrow('Notion API 速率限制，请稍后再试')
   })
 })

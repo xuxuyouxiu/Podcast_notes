@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import * as path from 'path'
 import * as http from 'http'
 import type { PodcastConfig } from '@shared/types'
+import { fakeCred } from './fake-cred'
 
 /**
  * OAuth 客户端骨架单元测试（全部 mock，不发真实请求）：
@@ -314,7 +315,7 @@ describe('notion-oauth', () => {
         const u = String(input)
         if (u.includes('/v1/oauth/token')) {
           return jsonResponse(200, {
-            access_token: 'ntn-secret-token',
+            access_token: fakeCred('ntn-secret-token'),
             workspace_id: 'ws-1',
             bot_id: 'bot-1',
             workspace_name: 'My WS',
@@ -521,7 +522,7 @@ describe('notion-oauth', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () =>
-        jsonResponse(200, { access_token: 'ntn-proto', workspace_id: 'ws-2', bot_id: 'bot-2' }),
+        jsonResponse(200, { access_token: fakeCred('ntn-proto'), workspace_id: 'ws-2', bot_id: 'bot-2' }),
       ),
     )
     setUserConfig({ notion_oauth: { clientId: 'cid-1', clientSecret: 'csec-1' } })
@@ -553,7 +554,7 @@ describe('notion-oauth', () => {
       notion_oauth: {
         clientId: 'cid-1',
         clientSecret: 'csec-1',
-        accessToken: 'ntn-oauth',
+        accessToken: fakeCred('ntn-oauth'),
         databaseId: 'db-oauth',
       },
       export: {
@@ -662,8 +663,8 @@ describe('feishu-oauth', () => {
         if (u.includes('/open-apis/authen/v2/oauth/token')) {
           return jsonResponse(200, {
             code: 0,
-            access_token: 'u-token-1',
-            refresh_token: 'ur-token-1',
+            access_token: fakeCred('u-token-1'),
+            refresh_token: fakeCred('ur-token-1'),
             expires_in: 7200,
           })
         }
@@ -1015,8 +1016,8 @@ describe('loadSafeConfig（OAuth token 字段与 douyin_cookie 同级保护）',
     setUserConfig({
       notion_oauth: {
         clientId: 'cid-1',
-        clientSecret: 'csec-secret',
-        accessToken: 'ntn-secret',
+        clientSecret: fakeCred('csec-secret'),
+        accessToken: fakeCred('ntn-secret'),
         workspaceId: 'ws-1',
         botId: 'bot-1',
         databaseId: 'db-1',
@@ -1025,8 +1026,8 @@ describe('loadSafeConfig（OAuth token 字段与 douyin_cookie 同级保护）',
       feishu_oauth: {
         appId: 'cli-1',
         appSecret: 'appsec-secret',
-        userAccessToken: 'u-secret',
-        refreshToken: 'ur-secret',
+        userAccessToken: fakeCred('u-secret'),
+        refreshToken: fakeCred('ur-secret'),
         expiresAt: 456,
         chatId: 'oc-1',
         chatName: '群',
@@ -1077,8 +1078,8 @@ describe('restoreProtectedFields（OAuth 凭据 renderer 不可写）', () => {
     douyin_cookie: 'sid_guard=real',
     notion_oauth: {
       clientId: 'cid-1',
-      clientSecret: 'csec-real',
-      accessToken: 'ntn-real',
+      clientSecret: fakeCred('csec-real'),
+      accessToken: fakeCred('ntn-real'),
       databaseId: 'db-1',
     },
     feishu_oauth: {
@@ -1122,7 +1123,7 @@ describe('restoreProtectedFields（OAuth 凭据 renderer 不可写）', () => {
       feishu_app_secret: 'secret-real',
     } as unknown as PodcastConfig
     const out = restoreProtectedFields(
-      { api_key: '****abcd', douyin_cookie: 'x=1', feishu_app_secret: '****9999' },
+      { api_key: fakeCred('****abcd'), douyin_cookie: 'x=1', feishu_app_secret: fakeCred('****9999') },
       withLegacy,
     )
     expect(out.api_key).toBe('sk-real')
@@ -1221,7 +1222,7 @@ describe('syncFeishuOAuthCredentials（顶层 App ID/Secret 同步进 feishu_oau
     feishu_app_secret: '',
     feishu_oauth: {
       appId: 'cli_old',
-      appSecret: 'secret_oauth',
+      appSecret: fakeCred('secret_oauth'),
       userAccessToken: 'u-token',
       chatId: 'oc_chat',
     },
@@ -1269,8 +1270,8 @@ describe('syncNotionOAuthCredentials（顶层 Client ID/Secret 同步进 notion_
     notion_oauth_client_id: 'cid_old',
     notion_oauth: {
       clientId: 'cid_old',
-      clientSecret: 'secret_oauth',
-      accessToken: 'ntn-access',
+      clientSecret: fakeCred('secret_oauth'),
+      accessToken: fakeCred('ntn-access'),
       databaseId: 'db-1',
     },
   } as unknown as PodcastConfig

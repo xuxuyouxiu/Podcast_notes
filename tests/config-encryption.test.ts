@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import * as path from 'path'
 import type { PodcastConfig } from '@shared/types'
+import { fakeCred } from './fake-cred'
 
 // ============================================================
 // Mock setup — hoisted so factories can reference these
@@ -78,23 +79,23 @@ function encVal(plain: string): string {
 
 function secretConfig(): PodcastConfig {
   return {
-    api_key: 'sk-app-plain',
+    api_key: fakeCred('sk-app-plain'),
     feishu_app_secret: 'fs-legacy-app-secret-plain',
     douyin_cookie: 'sid_guard=sg; sessionid=ss',
     feishu_oauth: {
       appId: 'cli_fs',
-      appSecret: 'fs-app-secret-plain',
-      userAccessToken: 'u-token',
-      refreshToken: 'u-refresh',
+      appSecret: fakeCred('fs-app-secret-plain'),
+      userAccessToken: fakeCred('u-token'),
+      refreshToken: fakeCred('u-refresh'),
     },
     notion_oauth: {
       clientId: 'cid',
-      clientSecret: 'ntn-client-secret',
-      accessToken: 'ntn-access-token',
+      clientSecret: fakeCred('ntn-client-secret'),
+      accessToken: fakeCred('ntn-access-token'),
     },
     export: {
       logseq_dir: '',
-      notion: { token: 'ntn-export-token', database_id: 'db-123' },
+      notion: { token: fakeCred('ntn-export-token'), database_id: 'db-123' },
     },
     ai_provider: 'deepseek',
     ai_providers: {} as PodcastConfig['ai_providers'],
@@ -276,7 +277,7 @@ describe('encryptSecretFields / decryptSecretFields', () => {
 
     // export 存在但 token 为空：保持空值，不触发加密
     const emptyToken = secretConfig()
-    emptyToken.export = { logseq_dir: '', notion: { token: '', database_id: 'db-123' } }
+    emptyToken.export = { logseq_dir: '', notion: { token: fakeCred(''), database_id: 'db-123' } }
     const enc2 = encryptSecretFields(emptyToken)
     expect(enc2.export?.notion?.token).toBe('')
     expect(enc2.export?.notion?.database_id).toBe('db-123')
@@ -351,16 +352,16 @@ describe('loadConfig / saveConfig 落盘闭环', () => {
 
   it('旧明文配置兼容：load 原样可用；下次 saveConfig 自动转加密', async () => {
     const legacyRaw = JSON.stringify({
-      api_key: 'sk-legacy',
+      api_key: fakeCred('sk-legacy'),
       douyin_cookie: 'old-cookie-plain',
       feishu_oauth: {
         appId: 'cli_fs',
-        appSecret: 'old-app-secret',
-        userAccessToken: 'old-u-token',
-        refreshToken: 'old-ref',
+        appSecret: fakeCred('old-app-secret'),
+        userAccessToken: fakeCred('old-u-token'),
+        refreshToken: fakeCred('old-ref'),
       },
-      notion_oauth: { clientId: 'cid', clientSecret: 'old-secret', accessToken: 'old-token' },
-      export: { logseq_dir: '', notion: { token: 'old-manual-token', database_id: 'db-legacy' } },
+      notion_oauth: { clientId: 'cid', clientSecret: fakeCred('old-secret'), accessToken: fakeCred('old-token') },
+      export: { logseq_dir: '', notion: { token: fakeCred('old-manual-token'), database_id: 'db-legacy' } },
     })
     mockExistsSync.mockImplementation((p: string) => p === USER_CONFIG_PATH)
     mockReadFileSync.mockImplementation((p: string) => (p === USER_CONFIG_PATH ? legacyRaw : ''))
@@ -444,12 +445,12 @@ describe('loadConfig / saveConfig 落盘闭环', () => {
       douyin_cookie: 'plain-cookie',
       feishu_oauth: {
         appId: 'cli_fs',
-        appSecret: 'plain-app-secret',
-        userAccessToken: 'plain-u-token',
-        refreshToken: 'plain-ref',
+        appSecret: fakeCred('plain-app-secret'),
+        userAccessToken: fakeCred('plain-u-token'),
+        refreshToken: fakeCred('plain-ref'),
       },
-      notion_oauth: { clientId: 'cid', clientSecret: 'plain-secret', accessToken: 'plain-token' },
-      export: { logseq_dir: '', notion: { token: 'plain-manual-token', database_id: 'db-plain' } },
+      notion_oauth: { clientId: 'cid', clientSecret: fakeCred('plain-secret'), accessToken: fakeCred('plain-token') },
+      export: { logseq_dir: '', notion: { token: fakeCred('plain-manual-token'), database_id: 'db-plain' } },
     })
     mockExistsSync.mockImplementation((p: string) => p === USER_CONFIG_PATH)
     mockReadFileSync.mockImplementation((p: string) => (p === USER_CONFIG_PATH ? plainRaw : ''))

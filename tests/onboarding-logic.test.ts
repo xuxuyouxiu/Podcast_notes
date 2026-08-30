@@ -18,6 +18,7 @@ import {
   computeStep,
 } from '../src/renderer/data/onboarding-logic'
 import type { AIProviderConfig, PodcastConfig } from '../src/shared/types'
+import { fakeCred } from './fake-cred'
 
 function provider(apiKey = ''): AIProviderConfig {
   return {
@@ -35,7 +36,7 @@ function makeConfig(patch: Partial<PodcastConfig> = {}): PodcastConfig {
   const config = {
     ai_provider: 'deepseek' as const,
     ai_providers: { deepseek: provider() },
-    api_key: '',
+    api_key: fakeCred(''),
     feishu_app_id: '',
     feishu_app_secret: '',
     language: 'auto' as const,
@@ -76,14 +77,14 @@ describe('getActiveProviderKey', () => {
   })
 
   it('deepseek 且无 provider key 时兜底 legacy api_key', () => {
-    const c = makeConfig({ api_key: 'sk-legacy123456' })
+    const c = makeConfig({ api_key: fakeCred('sk-legacy123456') })
     expect(getActiveProviderKey(c)).toBe('sk-legacy123456')
   })
 
   it('非 deepseek 供应商不兜底 legacy api_key', () => {
     const c = makeConfig({
       ai_provider: 'zhipu',
-      api_key: 'sk-legacy123456',
+      api_key: fakeCred('sk-legacy123456'),
       ai_providers: { deepseek: provider() },
     })
     expect(getActiveProviderKey(c)).toBe('')
@@ -97,9 +98,9 @@ describe('getActiveProviderKey', () => {
 
 describe('hasLegacyApiKey', () => {
   it('有 legacy api_key 为 true，空/缺失为 false', () => {
-    expect(hasLegacyApiKey(makeConfig({ api_key: 'sk-x' }))).toBe(true)
-    expect(hasLegacyApiKey(makeConfig({ api_key: '' }))).toBe(false)
-    expect(hasLegacyApiKey(makeConfig({ api_key: '   ' }))).toBe(false)
+    expect(hasLegacyApiKey(makeConfig({ api_key: fakeCred('sk-x') }))).toBe(true)
+    expect(hasLegacyApiKey(makeConfig({ api_key: fakeCred('') }))).toBe(false)
+    expect(hasLegacyApiKey(makeConfig({ api_key: fakeCred('   ') }))).toBe(false)
   })
 })
 
@@ -112,7 +113,7 @@ describe('isCoreConfigured', () => {
     const c = configuredConfig()
     const legacy = makeConfig({
       ...c,
-      api_key: 'sk-legacy',
+      api_key: fakeCred('sk-legacy'),
       ai_providers: { deepseek: provider() },
     })
     expect(isCoreConfigured(legacy)).toBe(true)
@@ -165,7 +166,7 @@ describe('shouldShowWizard', () => {
   })
 
   it('active provider 无 key 但有 legacy api_key + 目录 → 不弹', () => {
-    const c = makeConfig({ api_key: 'sk-legacy123456', obsidian_dir: 'D:/notes' })
+    const c = makeConfig({ api_key: fakeCred('sk-legacy123456'), obsidian_dir: 'D:/notes' })
     expect(shouldShowWizard(c)).toBe(false)
   })
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mapNotionDatabases, listNotionDatabases } from '../src/main/notion-databases'
+import { fakeCred } from './fake-cred'
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }))
 vi.mock('../src/main/config', () => ({ loadConfig: mockLoadConfig }))
@@ -49,7 +50,7 @@ describe('mapNotionDatabases', () => {
 
 describe('listNotionDatabases', () => {
   it('未配置 token → 可读错误，不发请求', async () => {
-    mockLoadConfig.mockReturnValue({ export: { notion: { token: '', database_id: '' } } })
+    mockLoadConfig.mockReturnValue({ export: { notion: { token: fakeCred(''), database_id: '' } } })
     const result = await listNotionDatabases()
     expect(result.success).toBe(false)
     expect(result.error).toContain('未配置')
@@ -57,7 +58,7 @@ describe('listNotionDatabases', () => {
 
   it('200 → 返回数据库列表', async () => {
     mockLoadConfig.mockReturnValue({
-      export: { notion: { token: 'ntn_test', database_id: '' } },
+      export: { notion: { token: fakeCred('ntn_test'), database_id: '' } },
     })
     vi.stubGlobal(
       'fetch',
@@ -78,7 +79,7 @@ describe('listNotionDatabases', () => {
 
   it('401/403 → Token 无效', async () => {
     mockLoadConfig.mockReturnValue({
-      export: { notion: { token: 'ntn_bad', database_id: '' } },
+      export: { notion: { token: fakeCred('ntn_bad'), database_id: '' } },
     })
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(401, { message: 'unauthorized' })))
     const result = await listNotionDatabases()
@@ -88,7 +89,7 @@ describe('listNotionDatabases', () => {
 
   it('网络错误 → 可读提示', async () => {
     mockLoadConfig.mockReturnValue({
-      export: { notion: { token: 'ntn_test', database_id: '' } },
+      export: { notion: { token: fakeCred('ntn_test'), database_id: '' } },
     })
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('fetch failed') }))
     const result = await listNotionDatabases()

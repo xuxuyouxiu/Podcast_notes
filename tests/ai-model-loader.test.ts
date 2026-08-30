@@ -5,6 +5,7 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import { loadAIModels } from '../src/renderer/data/ai-model-loader'
+import { fakeCred } from './fake-cred'
 
 describe('loadAIModels', () => {
   const models = [
@@ -17,7 +18,7 @@ describe('loadAIModels', () => {
     const out = await loadAIModels({
       fetchModels,
       baseUrl: 'https://api.example.com/v1',
-      apiKey: 'sk-test',
+      apiKey: fakeCred('sk-test'),
       currentModel: '',
     })
     expect(out.ok).toBe(true)
@@ -33,7 +34,7 @@ describe('loadAIModels', () => {
     const out = await loadAIModels({
       fetchModels,
       baseUrl: 'u',
-      apiKey: 'k',
+      apiKey: fakeCred('k'),
       currentModel: 'm9',
     })
     expect(out.ok).toBe(true)
@@ -44,7 +45,7 @@ describe('loadAIModels', () => {
     const out1 = await loadAIModels({
       fetchModels: async () => ({ success: false, models: [], error: 'API Key 无效' }),
       baseUrl: 'u',
-      apiKey: 'k',
+      apiKey: fakeCred('k'),
     })
     expect(out1.ok).toBe(false)
     expect(out1.error).toBe('API Key 无效')
@@ -53,7 +54,7 @@ describe('loadAIModels', () => {
     const out2 = await loadAIModels({
       fetchModels: async () => ({ success: true, models: [] }),
       baseUrl: 'u',
-      apiKey: 'k',
+      apiKey: fakeCred('k'),
     })
     expect(out2.ok).toBe(false)
     expect(out2.error).toBeUndefined()
@@ -66,7 +67,7 @@ describe('loadAIModels', () => {
         throw new Error('net down')
       },
       baseUrl: 'u',
-      apiKey: 'k',
+      apiKey: fakeCred('k'),
     })
     expect(out.ok).toBe(false)
     expect(out.thrownError).toBe('net down')

@@ -27,12 +27,13 @@ vi.mock('../src/main/whisper', () => ({
 
 import { transcribeAudio } from '../src/main/transcriber/registry'
 import { nextSliceId } from '../src/main/transcriber/xfyun'
+import { fakeCred } from './fake-cred'
 
 function makeConfig(over: Partial<PodcastConfig> = {}): PodcastConfig {
   return {
     ai_provider: 'deepseek',
     ai_providers: {} as PodcastConfig['ai_providers'],
-    api_key: '',
+    api_key: fakeCred(''),
     feishu_app_id: '',
     feishu_app_secret: '',
     language: 'auto',
@@ -76,7 +77,7 @@ describe('讯飞 signa 签名算法（官方文档样例）', () => {
     // 官方 demo 公式：Base64(HmacSHA1(md5hex(appid + ts), api_key))
     const appId = '595f23df'
     const ts = '1512041814'
-    const apiKey = 'd9f4aa7ea6d94faca62cd88a28fd5234'
+    const apiKey = fakeCred('d9f4aa7ea6d94faca62cd88a28fd5234')
     const md5 = crypto
       .createHash('md5')
       .update(appId + ts)

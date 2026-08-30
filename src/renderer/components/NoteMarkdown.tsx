@@ -91,7 +91,14 @@ export default function NoteMarkdown({
     const onClick = (e: MouseEvent) => {
       const a = e.currentTarget as HTMLAnchorElement
       const href = a.getAttribute('href') || ''
-      if (href.startsWith('http')) return
+      if (/^https?:\/\//i.test(href)) {
+        // 外部链接：不 preventDefault 会让主窗口整页导航到网页（无边框窗口直接被顶掉，回不来），
+        // 必须阻止默认行为并转交用户默认浏览器
+        e.preventDefault()
+        e.stopPropagation()
+        void window.electronAPI.openExternal(href)
+        return
+      }
       e.preventDefault()
       onLinkClick?.(href)
     }

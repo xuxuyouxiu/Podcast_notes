@@ -243,6 +243,18 @@ function createWindow() {
     return { action: 'deny' }
   })
 
+  // 规则：主框架不允许被导航走——笔记等处的 <a> 外链若漏到默认导航，会把无边框主窗口
+  // 整页顶成外部网页（无关闭/返回按钮）。一律拦截：http/https 转交默认浏览器，其余阻止。
+  // 初始 loadURL/loadFile 与 SPA 路由（pushState）不触发此事件，不受影响。
+  mainWindow.webContents.on('will-navigate', (e, url) => {
+    e.preventDefault()
+    if (/^https?:\/\//i.test(url)) {
+      try {
+        shell.openExternal(url)
+      } catch {}
+    }
+  })
+
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
   } else {

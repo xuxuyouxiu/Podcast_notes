@@ -14,6 +14,7 @@ vi.mock('../src/main/ai-client', () => ({
 import { testAIConnection } from '../src/main/ai-test'
 import { normalizeBaseUrl } from '../src/main/ai-providers'
 import type { AITestParams } from '../src/shared/types'
+import { fakeCred } from './fake-cred'
 
 const mockFetch = vi.fn()
 
@@ -128,7 +129,7 @@ describe('testAIConnection 网络与入参', () => {
 
   it('缺 baseUrl / apiKey / model → unknown，不发请求', async () => {
     expect((await testAIConnection(params({ baseUrl: '' }))).code).toBe('unknown')
-    expect((await testAIConnection(params({ apiKey: '' }))).code).toBe('unknown')
+    expect((await testAIConnection(params({ apiKey: fakeCred('') }))).code).toBe('unknown')
     expect((await testAIConnection(params({ model: '' }))).code).toBe('unknown')
     expect(mockFetch).not.toHaveBeenCalled()
   })

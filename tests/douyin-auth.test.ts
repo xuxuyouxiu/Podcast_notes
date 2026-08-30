@@ -108,6 +108,7 @@ import {
   yamlSafeValue,
   } from '../src/main/douyin-auth'
 import { restoreProtectedFields } from '../src/main/ipc/config-ipc'
+import { fakeCred } from './fake-cred'
 
 // ============================================================
 // Helpers
@@ -270,7 +271,7 @@ describe('restoreProtectedFields（douyin 凭据 renderer 不可写）', () => {
   const current = {
     douyin_cookie: 'sid_guard=real; sessionid=real',
     douyin_login: { status: 'connected', nickname: '真实昵称', verifiedAt: 1 },
-    api_key: 'sk-real',
+    api_key: fakeCred('sk-real'),
     feishu_app_secret: 'secret-real',
   } as unknown as PodcastConfig
 
@@ -303,7 +304,7 @@ describe('restoreProtectedFields（douyin 凭据 renderer 不可写）', () => {
   })
 
   it('既有 api_key **** 脱敏还原不受影响（回归）', () => {
-    const out = restoreProtectedFields({ api_key: '****abcd', douyin_cookie: 'x=1' }, current)
+    const out = restoreProtectedFields({ api_key: fakeCred('****abcd'), douyin_cookie: 'x=1' }, current)
     expect(out.api_key).toBe('sk-real')
   })
 
@@ -314,7 +315,7 @@ describe('restoreProtectedFields（douyin 凭据 renderer 不可写）', () => {
         deepseek: {
           id: 'deepseek',
           name: 'x',
-          apiKey: 'sk-ds-real',
+          apiKey: fakeCred('sk-ds-real'),
           baseUrl: '',
           model: '',
           availableModels: [],
@@ -323,7 +324,7 @@ describe('restoreProtectedFields（douyin 凭据 renderer 不可写）', () => {
     } as unknown as PodcastConfig
     const out = restoreProtectedFields(
       {
-        ai_providers: { deepseek: { apiKey: '****9999' } },
+        ai_providers: { deepseek: { apiKey: fakeCred('****9999') } },
         douyin_cookie: '****',
       },
       withProviders,
