@@ -1,6 +1,6 @@
 {
   "name": "podmuse",
-  "version": "1.52.11",
+  "version": "1.52.12",
   "description": "PodMuse - 把播客变成你的知识库。粘贴任意播客/视频链接，AI 自动转写、提炼、生成结构化笔记，沉淀到自己的笔记库（兼容 Obsidian/Logseq 等）",
   "main": "dist-electron/main/index.js",
   "author": "PodMuse contributors",

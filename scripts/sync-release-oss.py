@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 """发布产物同步到阿里云 OSS（GitHub Actions 中运行）
 
-把 dist-exe 下的安装包 / blockmap / latest.yml 上传到 download/v{version}/：
-- 安装包与 blockmap 内容不可变 → Cache-Control 长缓存
-- latest.yml 是更新探测入口 → no-cache（必须永远拿到最新）
+上传策略：
+- 新版安装包 / blockmap / latest.yml 上传到 download/v{version}/（安装包不可变 → 长缓存）
+- latest.yml 的 files[].url 与 path 改写为绝对 URL（指向新版本目录）后，
+  同步一份到**所有已存在的 download/v*/ 目录** + 固定路径 download/latest.yml：
+  - 应用内更新器（src/main/updater.ts 通道 0）探测的是「当前运行版本自己的目录」，
+    读到自己目录里的 yml 才能发现新版本；yml 内绝对 URL 使下载直达新版本目录，
+    无需把 115MB 安装包复制进每个历史目录（海外 runner 跨洋上传极慢，v1.52.11 踩坑）。
+  - electron-updater 用 new URL(file.url, feedBase) 解析，绝对 URL 直接生效（v6.8.9 已验证）。
 密钥从环境变量读取（仓库 Secrets：OSS_AK_ID / OSS_AK_SECRET / OSS_ENDPOINT）；
 Secrets 未配置时警告并跳过（退出码 0），不阻塞 Release 流程。
 """
@@ -18,6 +23,7 @@ def main() -> None:
     sk = os.environ.get("OSS_AK_SECRET", "")
     endpoint = os.environ.get("OSS_ENDPOINT", "")
     bucket_name = os.environ.get("OSS_BUCKET", "podmuse")
+    public_base = os.environ.get("OSS_PUBLIC_BASE", "https://dl.xuxuya66.top").rstrip("/")
 
     if not (ak and sk and endpoint):
         print("[sync-oss] OSS Secrets 未配置（OSS_AK_ID/OSS_AK_SECRET/OSS_ENDPOINT），跳过同步")
@@ -25,8 +31,9 @@ def main() -> None:
 
     try:
         import oss2
-    except ImportError:
-        sys.exit("[sync-oss] 缺少依赖：请先 pip install oss2")
+        import yaml
+    except ImportError as e:
+        sys.exit(f"[sync-oss] 缺少依赖（oss2 / pyyaml）：{e}")
 
     version = json.load(open("package.json", encoding="utf-8"))["version"]
     auth = oss2.Auth(ak, sk)
@@ -36,7 +43,6 @@ def main() -> None:
     targets = [
         (f"PodMuse-Setup-{version}.exe", "max-age=31536000, immutable"),
         (f"PodMuse-Setup-{version}.exe.blockmap", "max-age=31536000, immutable"),
-        ("latest.yml", "no-cache"),
     ]
 
     for fname, cache in targets:
@@ -47,34 +53,37 @@ def main() -> None:
         bucket.put_object_from_file(key, local, headers={"CacheControl": cache})
         print(f"[sync-oss] OK {key}")
 
-    # 固定路径副本（不带版本号）：供官网/外部探测「最新版本号」，
-    # 否则探测方必须先知道版本号才能拼出带版本的路径（鸡生蛋）
-    bucket.put_object_from_file(
-        "download/latest.yml", os.path.join(dist, "latest.yml"), headers={"CacheControl": "no-cache"}
-    )
+    # 改写 latest.yml：下载地址改为绝对 URL，指向新版本目录
+    # （files[].url 与 path 都改，兼容 electron-updater 的两种读取路径）
+    info = yaml.safe_load(open(os.path.join(dist, "latest.yml"), encoding="utf-8"))
+    for f in info.get("files", []):
+        if "url" in f and not str(f["url"]).startswith("http"):
+            f["url"] = f"{public_base}/download/v{version}/{f['url']}"
+    if info.get("path") and not str(info["path"]).startswith("http"):
+        info["path"] = f"{public_base}/download/v{version}/{info['path']}"
+    yml_body = yaml.safe_dump(info, allow_unicode=True, default_flow_style=False, sort_keys=True)
+
+    yml_cache = {"CacheControl": "no-cache"}
+    bucket.put_object("download/v{v}/latest.yml".format(v=version), yml_body.encode("utf-8"), headers=yml_cache)
+    print(f"[sync-oss] OK download/v{version}/latest.yml（绝对 URL）")
+
+    # 固定路径副本（不带版本号）：供官网/外部探测「最新版本号」
+    bucket.put_object("download/latest.yml", yml_body.encode("utf-8"), headers=yml_cache)
     print("[sync-oss] OK download/latest.yml")
 
-    # 镜像到所有历史版本目录 —— 关键修复（v1.52.11）：
-    # 应用内更新器的 OSS 通道探测的是「当前运行版本自己的目录」
-    # （download/v{运行版本}/latest.yml，见 src/main/updater.ts 通道 0）。
-    # 若各目录只放自己版本的 yml，OSS 通道结构上永远检测不到更新——
-    # 1.52.9 客户端读 v1.52.9/latest.yml 得到 1.52.9 → 恒报「已是最新」。
-    # 因此每次发布把新版 latest.yml + 安装包 + blockmap 镜像进所有已存在的 v*/ 目录，
-    # 任意旧版本客户端都能在自己目录内完成更新检测与下载（相对路径就近解析）。
-    # 注意：旧目录会随版本数累积安装包副本（每版 ~110MB），必要时可在 OSS 控制台手动清理。
+    # 镜像 yml 到所有历史版本目录（每个仅 2KB）：应用内更新器探测的是
+    # 「当前运行版本自己的目录」，老客户端在自己目录内发现新版本后，
+    # 经 yml 里的绝对 URL 直达新版本目录下载安装包。
     seen_dirs = set()
     for obj in oss2.ObjectIterator(bucket, prefix="download/v"):
         m = re.match(r"download/(v[^/]+)/", obj.key)
         if m:
             seen_dirs.add(m.group(1))
-    seen_dirs.discard(f"v{version}")  # 当前版本目录已直接上传过
+    seen_dirs.discard(f"v{version}")
     for d in sorted(seen_dirs):
-        for fname, cache in targets:
-            key = f"download/{d}/{fname}"
-            bucket.put_object_from_file(
-                key, os.path.join(dist, fname), headers={"CacheControl": cache}
-            )
-            print(f"[sync-oss] MIRROR {key}")
+        key = f"download/{d}/latest.yml"
+        bucket.put_object(key, yml_body.encode("utf-8"), headers=yml_cache)
+        print(f"[sync-oss] MIRROR {key}")
     if seen_dirs:
         print(f"[sync-oss] 已镜像 {len(seen_dirs)} 个历史版本目录: {', '.join(sorted(seen_dirs))}")
 
