@@ -92,6 +92,9 @@ export default function NotesPanel() {
 
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
+  // 标签右键菜单（Obsidian 式批量关闭），坐标为屏幕固定定位
+  const [tabMenu, setTabMenu] = useState<{ x: number; y: number; tabId: string } | null>(null)
+  const tabMenuRef = useRef<HTMLDivElement>(null)
   // 拖动分隔条调整栏宽
   const startDrag = useCallback(
     (e: React.MouseEvent, side: 'files' | 'chat') => {
@@ -226,6 +229,38 @@ export default function NotesPanel() {
       setPreview(null)
     }
   }
+
+  // 批量关闭（右键菜单：关闭其他/左侧/右侧/全部）。
+  // 激活标签被关时，落到锚点（菜单所在标签）位置的邻近标签，模拟 Obsidian 的焦点走向
+  function closeTabs(ids: string[], anchorId: string) {
+    if (ids.length === 0) return
+    const idSet = new Set(ids)
+    const anchorIdx = tabs.findIndex(tb => tb.id === anchorId)
+    const next = tabs.filter(tb => !idSet.has(tb.id))
+    setTabs(next)
+    if (activeTabId && idSet.has(activeTabId)) {
+      const fallback = next[Math.min(Math.max(anchorIdx, 0), next.length - 1)] ?? null
+      setActiveTabId(fallback?.id ?? null)
+      setPreview(null)
+    }
+  }
+
+  // 右键菜单：点击外部 / Esc 关闭
+  useEffect(() => {
+    if (!tabMenu) return
+    const onDown = (e: MouseEvent) => {
+      if (tabMenuRef.current && !tabMenuRef.current.contains(e.target as Node)) setTabMenu(null)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setTabMenu(null)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [tabMenu])
 
   // 解析链接 href → 候选绝对路径列表（相对当前笔记 + 库根全局，Obsidian 语义）
   const resolveHrefs = useCallback(
@@ -546,6 +581,15 @@ export default function NotesPanel() {
                     setActiveTabId(tab.id)
                     setActiveTabPath(tab.path)
                   }}
+                  onContextMenu={e => {
+                    e.preventDefault()
+                    // 视口内夹紧，避免菜单贴边溢出
+                    setTabMenu({
+                      x: Math.min(e.clientX, window.innerWidth - 190),
+                      y: Math.min(e.clientY, window.innerHeight - 200),
+                      tabId: tab.id,
+                    })
+                  }}
                   title={tab.name}
                 >
                   <span className="notes-panel__tab-dot" />
@@ -666,6 +710,69 @@ export default function NotesPanel() {
             ) : (
               <div className="notes-preview-pop__empty">{t('笔记不存在')}</div>
             )}
+          </div>,
+          document.body,
+        )}
+
+      {/* 标签右键菜单 — Obsidian 式批量关闭 */}
+      {tabMenu &&
+        createPortal(
+          <div
+            ref={tabMenuRef}
+            className="notes-tab-menu"
+            style={{ top: tabMenu.y, left: tabMenu.x }}
+          >
+            <button
+              className="notes-tab-menu__item"
+              onClick={() => {
+                closeTab(tabMenu.tabId)
+                setTabMenu(null)
+              }}
+            >
+              {t('关闭标签')}
+            </button>
+            <button
+              className="notes-tab-menu__item"
+              onClick={() => {
+                closeTabs(
+                  tabs.filter(tb => tb.id !== tabMenu.tabId).map(tb => tb.id),
+                  tabMenu.tabId,
+                )
+                setTabMenu(null)
+              }}
+            >
+              {t('关闭其他标签')}
+            </button>
+            <button
+              className="notes-tab-menu__item"
+              onClick={() => {
+                const i = tabs.findIndex(tb => tb.id === tabMenu.tabId)
+                closeTabs(tabs.slice(0, Math.max(i, 0)).map(tb => tb.id), tabMenu.tabId)
+                setTabMenu(null)
+              }}
+            >
+              {t('关闭左侧标签')}
+            </button>
+            <button
+              className="notes-tab-menu__item"
+              onClick={() => {
+                const i = tabs.findIndex(tb => tb.id === tabMenu.tabId)
+                closeTabs(tabs.slice(i + 1).map(tb => tb.id), tabMenu.tabId)
+                setTabMenu(null)
+              }}
+            >
+              {t('关闭右侧标签')}
+            </button>
+            <div className="notes-tab-menu__sep" />
+            <button
+              className="notes-tab-menu__item notes-tab-menu__item--danger"
+              onClick={() => {
+                closeTabs(tabs.map(tb => tb.id), tabMenu.tabId)
+                setTabMenu(null)
+              }}
+            >
+              {t('关闭全部标签')}
+            </button>
           </div>,
           document.body,
         )}
