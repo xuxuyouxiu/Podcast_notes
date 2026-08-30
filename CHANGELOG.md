@@ -5,6 +5,11 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，\
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.52.11] - 2026-08-30
+
+### 修复
+- **应用内检查更新恒报「已是最新」**：OSS 更新通道探测的是「当前运行版本自己的目录」（`download/v{运行版本}/latest.yml`），而各目录里永远只放着那个版本自己的 yml——1.52.9 客户端读到 1.52.9，结构上永远检测不到更新。修复：发布时把新版 latest.yml + 安装包 + blockmap 镜像写入所有已存在的 `download/v*/` 目录（scripts/sync-release-oss.py），任意旧版本客户端在自己目录内即可完成检测与下载，无需先升级即可被解救。
+
 ## [1.52.10] - 2026-08-30
 
 ### 新增

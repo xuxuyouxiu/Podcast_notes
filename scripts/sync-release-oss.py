@@ -9,6 +9,7 @@ Secrets 未配置时警告并跳过（退出码 0），不阻塞 Release 流程�
 """
 import json
 import os
+import re
 import sys
 
 
@@ -52,6 +53,30 @@ def main() -> None:
         "download/latest.yml", os.path.join(dist, "latest.yml"), headers={"CacheControl": "no-cache"}
     )
     print("[sync-oss] OK download/latest.yml")
+
+    # 镜像到所有历史版本目录 —— 关键修复（v1.52.11）：
+    # 应用内更新器的 OSS 通道探测的是「当前运行版本自己的目录」
+    # （download/v{运行版本}/latest.yml，见 src/main/updater.ts 通道 0）。
+    # 若各目录只放自己版本的 yml，OSS 通道结构上永远检测不到更新——
+    # 1.52.9 客户端读 v1.52.9/latest.yml 得到 1.52.9 → 恒报「已是最新」。
+    # 因此每次发布把新版 latest.yml + 安装包 + blockmap 镜像进所有已存在的 v*/ 目录，
+    # 任意旧版本客户端都能在自己目录内完成更新检测与下载（相对路径就近解析）。
+    # 注意：旧目录会随版本数累积安装包副本（每版 ~110MB），必要时可在 OSS 控制台手动清理。
+    seen_dirs = set()
+    for obj in oss2.ObjectIterator(bucket, prefix="download/v"):
+        m = re.match(r"download/(v[^/]+)/", obj.key)
+        if m:
+            seen_dirs.add(m.group(1))
+    seen_dirs.discard(f"v{version}")  # 当前版本目录已直接上传过
+    for d in sorted(seen_dirs):
+        for fname, cache in targets:
+            key = f"download/{d}/{fname}"
+            bucket.put_object_from_file(
+                key, os.path.join(dist, fname), headers={"CacheControl": cache}
+            )
+            print(f"[sync-oss] MIRROR {key}")
+    if seen_dirs:
+        print(f"[sync-oss] 已镜像 {len(seen_dirs)} 个历史版本目录: {', '.join(sorted(seen_dirs))}")
 
     # 校验 latest.yml 可读且含版本号（防传错文件）
     obj = bucket.get_object(f"download/v{version}/latest.yml")
