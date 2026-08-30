@@ -61,7 +61,10 @@ def main() -> None:
             f["url"] = f"{public_base}/download/v{version}/{f['url']}"
     if info.get("path") and not str(info["path"]).startswith("http"):
         info["path"] = f"{public_base}/download/v{version}/{info['path']}"
-    yml_body = yaml.safe_dump(info, allow_unicode=True, default_flow_style=False, sort_keys=True)
+    # sort_keys=False 保持 electron-builder 原字段顺序（version 在前；且后续头 256 字节校验依赖它）
+    yml_body = yaml.safe_dump(
+        info, allow_unicode=True, default_flow_style=False, sort_keys=False
+    ).encode("utf-8")
 
     yml_cache = {"CacheControl": "no-cache"}
     bucket.put_object("download/v{v}/latest.yml".format(v=version), yml_body.encode("utf-8"), headers=yml_cache)
@@ -87,10 +90,10 @@ def main() -> None:
     if seen_dirs:
         print(f"[sync-oss] 已镜像 {len(seen_dirs)} 个历史版本目录: {', '.join(sorted(seen_dirs))}")
 
-    # 校验 latest.yml 可读且含版本号（防传错文件）
+    # 校验 latest.yml 可读且含版本号（防传错文件；全文匹配，不依赖字段顺序）
     obj = bucket.get_object(f"download/v{version}/latest.yml")
-    head = obj.read(256).decode("utf-8", errors="replace")
-    if f"version: {version}" not in head:
+    body = obj.read().decode("utf-8", errors="replace")
+    if f"version: {version}" not in body:
         sys.exit("[sync-oss] latest.yml 内容校验失败（版本号不符）")
     print(f"[sync-oss] DONE 版本 {version} 已同步至 OSS")
 

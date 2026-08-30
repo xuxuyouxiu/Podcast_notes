@@ -5,6 +5,11 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，\
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.52.13] - 2026-08-30
+
+### 修复
+- **OSS 同步脚本自检误判导致 Release 假失败**：v1.52.12 实际已把改写后的 yml 镜像到全部历史目录（安装包 200 可下载，更新链路已恢复），但 `yaml.safe_dump(sort_keys=True)` 把 `version:` 字段排到了文档末尾，脚本自检只读头 256 字节找版本号 → 误报失败。现保持原字段顺序（`sort_keys=False`）且全文匹配版本号。
+
 ## [1.52.12] - 2026-08-30
 
 ### 改进
