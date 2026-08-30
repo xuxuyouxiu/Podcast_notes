@@ -67,11 +67,11 @@ def main() -> None:
     ).encode("utf-8")
 
     yml_cache = {"CacheControl": "no-cache"}
-    bucket.put_object("download/v{v}/latest.yml".format(v=version), yml_body.encode("utf-8"), headers=yml_cache)
+    bucket.put_object(f"download/v{version}/latest.yml", yml_body, headers=yml_cache)
     print(f"[sync-oss] OK download/v{version}/latest.yml（绝对 URL）")
 
     # 固定路径副本（不带版本号）：供官网/外部探测「最新版本号」
-    bucket.put_object("download/latest.yml", yml_body.encode("utf-8"), headers=yml_cache)
+    bucket.put_object("download/latest.yml", yml_body, headers=yml_cache)
     print("[sync-oss] OK download/latest.yml")
 
     # 镜像 yml 到所有历史版本目录（每个仅 2KB）：应用内更新器探测的是
@@ -85,7 +85,7 @@ def main() -> None:
     seen_dirs.discard(f"v{version}")
     for d in sorted(seen_dirs):
         key = f"download/{d}/latest.yml"
-        bucket.put_object(key, yml_body.encode("utf-8"), headers=yml_cache)
+        bucket.put_object(key, yml_body, headers=yml_cache)
         print(f"[sync-oss] MIRROR {key}")
     if seen_dirs:
         print(f"[sync-oss] 已镜像 {len(seen_dirs)} 个历史版本目录: {', '.join(sorted(seen_dirs))}")
