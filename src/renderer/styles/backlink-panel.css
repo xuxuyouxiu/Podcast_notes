@@ -3,6 +3,21 @@
    由组件内联 <style> 块迁出，便于 Vite 提取与缓存
    ============================================ */
 
+/* ── 响应式排版：字号随窗口宽度平滑放大 ──
+   ~1280px（中屏）≈ 原大小（仅把 10/11px 的最小两档提到 11/12px），
+   1920px（最大化）约 +25%，2560px 封顶。仅作用于本面板，不影响其他界面。 */
+.backlink-panel {
+  --fs-xs: clamp(11px, 8px + 0.2344vw, 13px);
+  --fs-xs2: clamp(12px, 9px + 0.2344vw, 14px);
+  --fs-sm: clamp(13px, 10px + 0.2344vw, 15.5px);
+  --fs-base: clamp(13px, 10px + 0.2344vw, 15.5px);
+  --fs-md: clamp(13.5px, 10.5px + 0.2344vw, 16px);
+  --fs-lg: clamp(14.5px, 10.5px + 0.3125vw, 17px);
+  --fs-xl: clamp(16px, 12px + 0.3125vw, 19.5px);
+  --fs-2xl: clamp(18.5px, 14px + 0.3516vw, 22px);
+  --fs-3xl: clamp(21px, 15px + 0.4688vw, 26px);
+}
+
 .backlink-panel {
   display: flex;
   flex-direction: column;
@@ -141,7 +156,7 @@
   overflow: hidden;
 }
 .backlink-split__left {
-  width: 150px;
+  width: clamp(150px, 11.5vw, 200px);
   border-right: 1px solid var(--border-soft);
   overflow-y: auto;
   padding: 6px;
@@ -262,6 +277,8 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 0.1s;
+  /* 超宽窗口下限制行宽，保证可读性 */
+  max-width: 1000px;
 }
 .backlink-tl:hover { background: var(--bg-surface); }
 .backlink-tl--selected {
@@ -361,6 +378,7 @@
   background: var(--bg-surface);
   border: 1px solid var(--border);
   padding: 6px;
+  max-width: 1000px;
 }
 .backlink-co__item {
   display: flex;
